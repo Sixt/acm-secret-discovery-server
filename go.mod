@@ -1,4 +1,4 @@
-module github.com/sixt/acm-secret-discovery
+module github.com/sixt/acm-secret-discovery-server
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.26.3

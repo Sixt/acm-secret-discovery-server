@@ -19,18 +19,20 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/sixt/acm-secret-discovery/config"
-	"github.com/sixt/acm-secret-discovery/manager"
-	"github.com/sixt/acm-secret-discovery/provisioners"
-	"github.com/sixt/acm-secret-discovery/sds"
+	"github.com/sixt/acm-secret-discovery-server/config"
+	"github.com/sixt/acm-secret-discovery-server/manager"
+	"github.com/sixt/acm-secret-discovery-server/provisioners"
+	"github.com/sixt/acm-secret-discovery-server/sds"
 )
 
 // Version value is set by the linker during the build
 var Version string
+var Commit string
 
 func main() {
 	cfg := &config.Config{}
 	if err := envconfig.Process("", cfg); err != nil {
+		slog.Info("ACM SDS server - version: " + Version + " commit: " + Commit)
 		slog.Error("failed to process configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
@@ -39,7 +41,7 @@ func main() {
 		New(slog.NewJSONHandler(os.Stdout, nil)).
 		With(slog.Any("service", "acm-secret-discovery"))
 
-	logger.Info("SDS server starting")
+	logger.Info("ACM SDS server starting - version: " + Version + " commit: " + Commit)
 
 	// Create a context that will be stopped when the program receives an interrupt signal
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
