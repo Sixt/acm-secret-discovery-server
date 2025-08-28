@@ -69,6 +69,17 @@ func main() {
 		RotationPeriod: cfg.RotationPeriod,
 	}
 
+	// attempt to fetch secrets to verify that everything is working
+	if cfg.CACert == "" {
+		_, err = secretsManager.Provisioner.GetResources(ctx, []string{"certificate"})
+	} else {
+		_, err = secretsManager.Provisioner.GetResources(ctx, []string{"certificate", "ca_certificate"})
+	}
+	if err != nil {
+		logger.Error("failed to get secrets", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	// Initialize SDS server
 	sdsServerStop := make(chan struct{})
 	sdsServer := &sds.Server{
@@ -102,6 +113,8 @@ func main() {
 		}
 		logger.Info("grpc server stopped")
 	}()
+
+	logger.Info("ready to serve")
 
 	<-ctx.Done()
 	logger.Info("graceful shutdown triggered")
