@@ -28,7 +28,7 @@ type SecretsManager struct {
 }
 
 func (m *SecretsManager) Register(sessionID string, resourceNames []string) <-chan []auth.Secret {
-	m.Logger.Info("registering session in secrets manager", slog.String("session_id", sessionID))
+	m.Logger.Info("registering session in secrets manager", slog.String("session_id", sessionID), slog.String("resources", fmt.Sprintf("%v", resourceNames)))
 
 	secrets := make(chan []auth.Secret)
 	chans := &chanTuple{
@@ -37,7 +37,7 @@ func (m *SecretsManager) Register(sessionID string, resourceNames []string) <-ch
 	}
 	m.sessionChans.Store(sessionID, chans)
 
-	go m.rotateSecrets(resourceNames, chans)
+	go m.rotateSecrets(sessionID, resourceNames, chans)
 
 	return secrets
 }
@@ -54,9 +54,10 @@ func (m *SecretsManager) Unregister(sessionID string) error {
 	return nil
 }
 
-func (m *SecretsManager) rotateSecrets(resourceNames []string, chans *chanTuple) {
-	if err := m.sendSecrets(resourceNames, chans); err != nil {
-		m.Logger.Error("failed to get initial secrets", slog.Any("error", err))
+func (m *SecretsManager) rotateSecrets(sessionID string, resourceNames []string, chans *chanTuple) {
+	l := m.Logger.With(slog.String("session_id", sessionID))
+	if err := m.sendSecrets(sessionID, resourceNames, chans); err != nil {
+		l.Error("failed to get secrets", slog.Any("error", err))
 		return
 	}
 
@@ -67,8 +68,9 @@ func (m *SecretsManager) rotateSecrets(resourceNames []string, chans *chanTuple)
 	for {
 		select {
 		case <-t.C:
-			if err := m.sendSecrets(resourceNames, chans); err != nil {
-				m.Logger.Error("failed to rotate secrets", slog.Any("error", err))
+			l.Info(fmt.Sprintf("scheduled secret update for resources: %v", resourceNames))
+			if err := m.sendSecrets(sessionID, resourceNames, chans); err != nil {
+				l.Error("failed to rotate secrets", slog.Any("error", err))
 			}
 		case <-chans.cancel:
 			return
@@ -76,8 +78,9 @@ func (m *SecretsManager) rotateSecrets(resourceNames []string, chans *chanTuple)
 	}
 }
 
-func (m *SecretsManager) sendSecrets(resourceNames []string, chans *chanTuple) error {
-	secrets, err := m.Provisioner.GetResources(context.Background(), resourceNames)
+func (m *SecretsManager) sendSecrets(sessionID string, resourceNames []string, chans *chanTuple) error {
+	ctx := context.WithValue(context.Background(), "session_id", sessionID)
+	secrets, err := m.Provisioner.GetResources(ctx, resourceNames)
 	if err != nil {
 		return err
 	}

@@ -95,7 +95,7 @@ func (s *Server) StreamSecrets(stream secret.SecretDiscoveryService_StreamSecret
 				logger.Info("unexpected request case")
 			}
 		case secrets := <-secretsch:
-			logger.Info("updating secrets")
+			logger.Info("sending secrets")
 
 			nonce = uuid.NewString()
 			version = versionInfo()

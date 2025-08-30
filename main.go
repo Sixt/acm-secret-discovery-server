@@ -39,7 +39,7 @@ func main() {
 
 	logger := slog.
 		New(slog.NewJSONHandler(os.Stdout, nil)).
-		With(slog.Any("service", "acm-secret-discovery"))
+		With(slog.Any("service", "acm-secret-discovery-server"))
 
 	logger.Info("ACM SDS server starting - version: " + Version + " commit: " + Commit)
 
@@ -98,7 +98,7 @@ func main() {
 	// Start SDS server on UDS
 	listener, err := net.Listen("unix", "/tmp/envoy.sock")
 	if err != nil {
-		logger.Error("failed to listen on UDS: /tmp/envoy.sock")
+		logger.Error("failed to listen on UDS: /tmp/envoy.sock", slog.Any("error", err))
 		os.Exit(1)
 	}
 	if err := os.Chmod("/tmp/envoy.sock", 0777); err != nil {

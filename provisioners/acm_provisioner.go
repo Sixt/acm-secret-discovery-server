@@ -32,7 +32,8 @@ type ACMProvisioner struct {
 }
 
 func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (secrets []auth.Secret, err error) {
-	if err = validateResources(resources); err != nil {
+	sessionID, _ := ctx.Value("session_id").(string)
+	if err = p.validateResources(resources); err != nil {
 		return nil, fmt.Errorf("invalid resources: %w", err)
 	}
 
@@ -44,7 +45,7 @@ func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (
 				return nil, fmt.Errorf("failed to get certificate secret: %w", err)
 			}
 
-			p.Logger.Info("Certificate secret retrieved successfully")
+			p.Logger.With("session_id", sessionID).Info("certificate secret retrieved successfully")
 			secrets = append(secrets, s)
 		case caCertificateResource:
 			s, err := p.getCACertificateSecret(ctx)
@@ -52,7 +53,7 @@ func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (
 				return nil, fmt.Errorf("failed to get CA certificate secret: %w", err)
 			}
 
-			p.Logger.Info("CA certificate secret retrieved successfully")
+			p.Logger.With("session_id", sessionID).Info("CA certificate secret retrieved successfully")
 			secrets = append(secrets, s)
 		}
 	}
