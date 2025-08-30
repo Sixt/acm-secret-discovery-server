@@ -13,22 +13,18 @@ import (
 )
 
 const (
-	certificateResource   = "certificate"
-	caCertificateResource = "ca_certificate"
+	CertificateResource   = "certificate"
+	CaCertificateResource = "ca_certificate"
 )
-
-var acmResources = map[string]bool{
-	certificateResource:   true,
-	caCertificateResource: true,
-}
 
 // ACMProvisioner is useful for testing purposes
 type ACMProvisioner struct {
 	Logger *slog.Logger
 	Client *acm.Client
 
-	CertificateARN string
-	CACert         string
+	CertificateARN     string
+	CACert             string
+	AvailableResources map[string]bool
 }
 
 func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (secrets []auth.Secret, err error) {
@@ -39,7 +35,7 @@ func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (
 
 	for _, r := range resources {
 		switch r {
-		case certificateResource:
+		case CertificateResource:
 			s, err := p.getCertificateSecret(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get certificate secret: %w", err)
@@ -47,7 +43,7 @@ func (p *ACMProvisioner) GetResources(ctx context.Context, resources []string) (
 
 			p.Logger.With("session_id", sessionID).Info("certificate secret retrieved successfully")
 			secrets = append(secrets, s)
-		case caCertificateResource:
+		case CaCertificateResource:
 			s, err := p.getCACertificateSecret(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get CA certificate secret: %w", err)
@@ -72,7 +68,7 @@ func (p *ACMProvisioner) getCertificateSecret(ctx context.Context) (auth.Secret,
 	}
 
 	return auth.Secret{
-		Name: certificateResource,
+		Name: CertificateResource,
 		Type: &auth.Secret_TlsCertificate{
 			TlsCertificate: &auth.TlsCertificate{
 				CertificateChain: &core.DataSource{
@@ -101,7 +97,7 @@ func (p *ACMProvisioner) getCACertificateSecret(ctx context.Context) (auth.Secre
 	}
 
 	return auth.Secret{
-		Name: caCertificateResource,
+		Name: CaCertificateResource,
 		Type: &auth.Secret_ValidationContext{
 			ValidationContext: &auth.CertificateValidationContext{
 				TrustedCa: &core.DataSource{
@@ -114,9 +110,9 @@ func (p *ACMProvisioner) getCACertificateSecret(ctx context.Context) (auth.Secre
 	}, nil
 }
 
-func validateResources(resources []string) error {
+func (p *ACMProvisioner) validateResources(resources []string) error {
 	for _, r := range resources {
-		if !acmResources[r] {
+		if !p.AvailableResources[r] {
 			return fmt.Errorf("unknown resource: %q", r)
 		}
 	}

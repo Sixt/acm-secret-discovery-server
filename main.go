@@ -65,6 +65,10 @@ func main() {
 
 			CertificateARN: cfg.CertificateARN,
 			CACert:         cfg.CACert,
+			AvailableResources: map[string]bool{
+				provisioners.CertificateResource:   true,
+				provisioners.CaCertificateResource: cfg.CACert != "",
+			},
 		},
 		RotationPeriod: cfg.RotationPeriod,
 	}
