@@ -1,0 +1,86 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-edge
+  namespace: ingress
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: envoy-edge
+  template:
+    metadata:
+      labels:
+        app: envoy-edge
+    spec:
+      serviceAccountName: envoy-edge
+      initContainers:
+        - name: sds
+          image: ghcr.io/sixt/acm-secret-discovery-server:latest
+          restartPolicy: Always
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+          env:
+            - name: CA_CERT
+              valueFrom:
+                configMapKeyRef:
+                  name: envoy-ca-certificate
+                  key: cacert
+            - name: CERTIFICATE_ARN
+              value: arn:aws:acm:<region>:<account-id>:certificate/<certificate-id>
+      containers:
+        - name: envoy-edge
+          image: envoyproxy/envoy:latest
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+          args:
+            - --service-node
+            - mylb
+            - --config-path
+            - /etc/envoy/envoy.yaml
+            - --service-cluster
+            - ingress
+            - --drain-time-s
+            - "120"
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 9901
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 9901
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+      imagePullSecrets:
+        - name: registrypullsecret
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: envoy-config
+        - name: tmp
+          emptyDir:
+            medium: Memory

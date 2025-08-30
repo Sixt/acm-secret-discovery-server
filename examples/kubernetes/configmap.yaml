@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-edge
+  namespace: ingress
+data:
+  envoy.yaml: |
+    static_resources:
+      listeners:
+        - name: listener_0
+...
