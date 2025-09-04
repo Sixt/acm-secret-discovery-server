@@ -1,8 +1,5 @@
 # ACM Secret Discovery Server
 
-![Docker Image Version](https://img.shields.io/docker/v/ghcr.io/sixt/acm-secret-discovery-server) ![GitHub License](https://img.shields.io/github/license/Sixt/acm-secret-discovery-server)
-
-
 ACM Secret Discovery Server is an Envoy [SDS](https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret) interface server that provides TLS certificates to Envoy proxy using AWS Certificate Manager (ACM).
 
 It provides certificates for plain and mutual TLS (mTLS).
